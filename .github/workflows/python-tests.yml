@@ -3,7 +3,7 @@ name: Python Tests
 on:
   push:
     branches:
-      - '**'   # запуск на кожен push у будь-яку гілку
+      - '**'   # усі гілки
 
 jobs:
   test:
@@ -18,20 +18,20 @@ jobs:
         with:
           python-version: '3.11'
 
-      - name: Оновлюємо pip і ставимо залежності (якщо є)
+      - name: Оновлюємо pip і ставимо залежності (як є)
         run: |
           python -m pip install --upgrade pip
-          if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
+          if [ -f requirements.txt ]; then
+            pip install -r requirements.txt
+          fi
+          # гарантуємо наявність pytest
+          pip install pytest
 
-      - name: Встановлюємо pytest
-        run: pip install pytest
-
-      # ✅ Якщо тести є — запускаємо pytest; якщо немає — ввічливо пропускаємо й проходимо зелено
-      - name: Запускаємо тести (пропускаємо, якщо не знайдено)
+      # Якщо тести є — запускаємо; якщо немає — пропускаємо без помилки
+      - name: Запускаємо тести
         run: |
           if git ls-files | grep -E '(^|/)tests/.*\.py$|(^|/)(test_.*|.*_test)\.py$' > /dev/null; then
-            echo "Знайдено тестові файли, запускаємо pytest..."
-            pytest -q
+            python -m pytest -q
           else
-            echo "Тести не знайдені. Пропускаємо перевірку (це не помилка)."
+            echo "Тести не знайдені → пропускаємо (успіх)."
           fi
