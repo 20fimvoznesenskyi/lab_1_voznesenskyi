@@ -1,0 +1,57 @@
+services:
+  db:
+    image: postgres:16-alpine
+    container_name: micro-db
+    environment:
+      POSTGRES_DB: appdb
+      POSTGRES_USER: appuser
+      POSTGRES_PASSWORD: apppass
+    volumes:
+      - db_storage:/var/lib/postgresql/data
+    networks: [micro_net]
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
+  logger:
+    build: ./logger
+    container_name: micro-logger
+    environment:
+      PORT: "9000"
+    networks: [micro_net]
+    ports:
+      - "9000:9000"
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:9000/health"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  api:
+    build: ./api
+    container_name: micro-api
+    environment:
+      PORT: "8080"
+      PGHOST: db
+      PGPORT: "5432"
+      PGDATABASE: appdb
+      PGUSER: appuser
+      PGPASSWORD: apppass
+      LOGGER_URL: "http://logger:9000/log"
+    depends_on:
+      db:
+        condition: service_healthy
+      logger:
+        condition: service_healthy
+    networks: [micro_net]
+    ports:
+      - "8080:8080"
+
+volumes:
+  db_storage:
+
+networks:
+  micro_net:
+    driver: bridge
